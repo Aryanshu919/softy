@@ -1,8 +1,8 @@
-import nextAuth from "next-auth";
+import NextAuth from "next-auth";
 import GooglePorvider from "next-auth/providers/google"
 import prisma from "@/app/lib/db";
 
-const handler = nextAuth({
+const handler = NextAuth({
     providers:[
         GooglePorvider({
             clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -34,13 +34,6 @@ const handler = nextAuth({
             }
             return true;
         },
-          async jwt({ token, user}) {
-            // Attach user info to JWT
-            if (user) {
-              token.id = user.id;
-            }
-            return token;
-          },
     }
 
 })

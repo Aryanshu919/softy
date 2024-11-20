@@ -33,16 +33,19 @@ export default function Component() {
   }, [])
 
   async function refreshStream(){
-    const res = await axios.get("/api/streams/me")
+    const res = await axios.get("/api/streams/me",{
+      withCredentials: true
+    })
     console.log("logging res",res)
 
   }
   useEffect(() =>{
-    refreshStream();
-    const interval = setInterval(() => {
-      
-    }, REFRESH_INTERVAL_MS);
-  })
+    setInterval(() => {
+      refreshStream();
+    }, 3000);
+  },[])
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

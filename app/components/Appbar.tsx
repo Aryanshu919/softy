@@ -7,7 +7,6 @@ import { Music } from "lucide-react";
 
 export function Appbar(){
     const session = useSession();
-    
     return <div className="flex justify-between bg-blue-600 px-5 py-2">
         <div className="font-bold flex items-center text-white text-xl">
             <Music />
