@@ -4,28 +4,30 @@ import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react"
+import { ThumbsUp, Play, Share2 } from "lucide-react"
 import { Appbar } from '../components/Appbar'
 import axios from 'axios'
 
 
-type Video = {
-  id: string
-  title: string
-  votes: number
-  thumbnail: string
+interface Video {
+  "id": string,
+  "type": string,
+  "url": string,
+  "extractedId": string,
+  "title" : string,
+  "smallImg": string,
+  "bigImg": string,
+  "active" : boolean,
+  "userId": string,
+  "upvotes" : number,
+  "haveUpVoted": boolean
 }
 
-const REFRESH_INTERVAL_MS = 10 * 1000
 
 export default function Component() {
   const [videoLink, setVideoLink] = useState('')
-  const [queue, setQueue] = useState<Video[]>([
-    { id: 'dQw4w9WgXcQ', title: 'Rick Astley - Never Gonna Give You Up', votes: 5, thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/default.jpg' },
-    { id: 'L_jWHffIx5E', title: 'Smash Mouth - All Star', votes: 3, thumbnail: 'https://img.youtube.com/vi/L_jWHffIx5E/default.jpg' },
-    { id: 'fJ9rUzIMcZQ', title: 'Queen - Bohemian Rhapsody', votes: 4, thumbnail: 'https://img.youtube.com/vi/fJ9rUzIMcZQ/default.jpg' },
-  ])
-  const [currentVideo, setCurrentVideo] = useState('dQw4w9WgXcQ')
+  const [queue, setQueue] = useState<Video[]>([])
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null)
   const [canShare, setCanShare] = useState(false)
 
   useEffect(() => {
@@ -36,25 +38,35 @@ export default function Component() {
     const res = await axios.get("/api/streams/me",{
       withCredentials: true
     })
-    console.log("logging res",res)
-
+    console.log(res)
+    setQueue(res.data.streams)
+    
+    
   }
   useEffect(() =>{
+    refreshStream();
     setInterval(() => {
-      refreshStream();
-    }, 3000);
-  },[])
+      
+    }, 5000);
+  },[videoLink])
 
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const videoId = extractVideoId(videoLink)
-    if (videoId) {
-      const videoInfo = await fetchVideoInfo(videoId)
-      setQueue([...queue, videoInfo])
-      setVideoLink('')
+    await axios.post("/api/streams",{
+        creatorId: "82b28468-19f8-43c4-9dc6-dda2b879f365",
+        url : videoLink
+      
+    })
+    const newVideo : Video ={
+      id: String(queue.length + 1),
+      title: `new song ${queue.length + 1}`,
+      upvotes: 0,
     }
+    setQueue([...queue,newVideo])
+    setVideoLink('')
+
   }
 
   const extractVideoId = (url: string) => {
@@ -63,26 +75,38 @@ export default function Component() {
     return (match && match[2].length === 11) ? match[2] : null
   }
 
-  const fetchVideoInfo = async (videoId: string): Promise<Video> => {
-    // In a real application, you would fetch this data from the YouTube API
-    // For this example, we'll just return a placeholder object
-    return {
-      id: videoId,
-      title: 'New Video Title',
-      votes: 0,
-      thumbnail: `https://img.youtube.com/vi/${videoId}/default.jpg`
-    }
+  // const fetchVideoInfo = async (videoId: string): Promise<Video> => {
+  //   // In a real application, you would fetch this data from the YouTube API
+  //   // For this example, we'll just return a placeholder object
+  //   return {
+  //     id: videoId,
+  //     title: 'New Video Title',
+  //     votes: 0,
+  //     thumbnail: `https://img.youtube.com/vi/${videoId}/default.jpg`
+  //   }
+  // }
+
+  const handleVote = (id: string, isUpVote: boolean) => {
+    setQueue(queue?.map(video => 
+      video.id === id ? { 
+        ...video,
+        upvotes: isUpVote ? video.upvotes + 1 : video.upvotes,
+       } : video
+    ).sort((a, b) => (b.upvotes) - (a.upvotes)))
+
+
+    axios.post("api/streams/upvote",{
+      streamId: id
+    },{
+      withCredentials : true
+    })
+
   }
 
-  const handleVote = (id: string, increment: number) => {
-    setQueue(queue.map(video => 
-      video.id === id ? { ...video, votes: video.votes + increment } : video
-    ).sort((a, b) => b.votes - a.votes))
-  }
 
   const playNext = () => {
     if (queue.length > 0) {
-      setCurrentVideo(queue[0].id)
+      setCurrentVideo(queue[0])
       setQueue(queue.slice(1))
     }
   }
@@ -127,7 +151,7 @@ export default function Component() {
         </form>
         
         {/* Video Preview */}
-        {videoLink && extractVideoId(videoLink) && (
+        {videoLink && (
           <div className="aspect-video">
             <iframe
               src={`https://www.youtube.com/embed/${extractVideoId(videoLink)}`}
@@ -143,7 +167,7 @@ export default function Component() {
           <h2 className="text-2xl font-semibold text-blue-300">Now Playing</h2>
           <div className="aspect-video">
             <iframe
-              src={`https://www.youtube.com/embed/${currentVideo}`}
+              src={`https://www.youtube.com/embed/${currentVideo?.extractedId}`}
               className="w-full h-full"
               allowFullScreen
               title="Now playing"
@@ -157,12 +181,12 @@ export default function Component() {
         {/* Video Queue */}
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold text-blue-300">Upcoming Songs</h2>
-          {queue.map((video) => (
+          {queue?.map((video) => (
             <Card key={video.id} className="bg-gray-800 border-blue-500">
               <CardContent className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-2 sm:space-y-0 sm:space-x-4 flex-grow">
                   <img
-                    src={video.thumbnail}
+                    src={video.smallImg}
                     alt={`Thumbnail for ${video.title}`}
                     width={120}
                     height={90}
@@ -170,27 +194,18 @@ export default function Component() {
                   />
                   <div className="text-center sm:text-left">
                     <p className="font-medium text-blue-300">{video.title}</p>
-                    <p className="text-sm text-blue-400">Votes: {video.votes}</p>
+                    <p className="text-sm text-blue-400">Votes: {video.upvotes}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleVote(video.id, 1)}
+                    onClick={() => handleVote(video.id, true)}
                     className="flex items-center border-blue-500 text-blue-300 hover:bg-blue-800"
                   >
                     <ThumbsUp className="h-4 w-4 mr-1" />
-                    <span>{video.votes}</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleVote(video.id, -1)}
-                    className="flex items-center border-blue-500 text-blue-300 hover:bg-blue-800"
-                  >
-                    <ThumbsDown className="h-4 w-4 mr-1" />
-                    <span>{Math.max(0, video.votes - 1)}</span>
+                    <span>{video.upvotes}</span>
                   </Button>
                 </div>
               </CardContent>

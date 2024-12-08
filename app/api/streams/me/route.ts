@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 
 export async function GET() {
+    console.log("inside the get route of me");
     const session = await getServerSession();
     
     const user = await prisma.user.findFirst({
@@ -40,7 +41,8 @@ export async function GET() {
     return NextResponse.json({
         streams : streams.map(({_count, ...rest}) =>({
             ...rest,
-            upvotes:_count.upvotes
+            upvotes: _count.upvotes,
+            haveUpVoted: rest.upvotes.length ? true : false
         }))
     })
 }

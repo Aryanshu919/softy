@@ -17,6 +17,7 @@ export async function POST(req : NextRequest){
                 email: session?.user?.email ?? ""
             }
         });
+        console.log(user)
 
         if(!user){
             return NextResponse.json({
@@ -28,12 +29,18 @@ export async function POST(req : NextRequest){
 
         try {
             const data = UpvoteSchema.parse(await req.json()) 
+            console.log(data)
             await prisma.upvote.create({
                 data:{
                     userId: user.id,
                     streamId: data.streamId
                 }
             })
+            
+            return NextResponse.json({
+                msg : "upvoted Done !!"
+            })
+
         } catch (error) {
             return NextResponse.json({
                 error: error,
