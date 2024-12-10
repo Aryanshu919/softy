@@ -20,29 +20,5 @@ export async function GET() {
         })
     }
 
-   const streams = await prisma.stream.findMany({
-        where:{
-            userId: user.id,
-        },
-        include:{
-            _count:{
-                select:{
-                    upvotes:true
-                }
-            },
-            upvotes:{
-                where:{
-                    userId: user.id
-                }
-            }
-        }
-   })
 
-    return NextResponse.json({
-        streams : streams.map(({_count, ...rest}) =>({
-            ...rest,
-            upvotes: _count.upvotes,
-            haveUpVoted: rest.upvotes.length ? true : false
-        }))
-    })
 }

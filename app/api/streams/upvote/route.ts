@@ -10,8 +10,7 @@ const UpvoteSchema = z.object({
 })
 
 export async function POST(req : NextRequest){
-        const session = await getServerSession();
-
+    const session = await getServerSession();
         const user = await prisma.user.findFirst({
             where:{
                 email: session?.user?.email ?? ""
@@ -41,11 +40,11 @@ export async function POST(req : NextRequest){
                 msg : "upvoted Done !!"
             })
 
-        } catch (error) {
+        } 
+        catch (error) {
             return NextResponse.json({
                 error: error,
                 message: "given url is wrong "
             })
-            
         }
 }

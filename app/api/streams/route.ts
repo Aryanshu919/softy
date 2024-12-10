@@ -4,6 +4,7 @@ import {z} from "zod"
 import prisma  from "@/app/lib/db";
 //@ts-expect-error
 import youtubesearchapi from "youtube-search-api";
+import { getServerSession } from "next-auth";
 
 
 const YT_REGEX = /^(?:(?:https?:)?\/\/)?(?:www\.)?(?:m\.)?(?:youtu(?:be)?\.com\/(?:v\/|embed\/|watch(?:\/|\?v=))|youtu\.be\/)((?:\w|-){11})(?:\S+)?$/;
@@ -49,7 +50,8 @@ export async function POST(req: NextRequest){
         })
         return NextResponse.json({
             ...stream,
-            msg:"added stream"
+            haveupvoted:false,
+            upvotes:0
         })
     } catch (e) {
         return NextResponse.json({
@@ -66,13 +68,50 @@ export async function POST(req: NextRequest){
 
 export async function GET(req: NextRequest){
     const creatorId = req.nextUrl.searchParams.get("creatorId");
+    const session = await getServerSession();
+    
+    const user = await prisma.user.findFirst({
+        where:{
+            email: session?.user?.email ?? "",
+        }
+    });
+    
+
+    if(!user){
+        return NextResponse.json({
+            msg: "user not found"
+        })
+    }
+    if(!creatorId){
+        return NextResponse.json({
+            msg: "creatorId not found"
+        },{
+            status: 411
+        })
+    }
     const streams = await prisma.stream.findMany({
         where:{
-            userId: creatorId ?? ""
+            userId: creatorId,
+        },
+        include:{
+            _count:{
+                select:{
+                    upvotes:true
+                }
+            },
+            upvotes:{
+                where:{
+                    userId: user.id
+                }
+            }
         }
-    })
+   })
 
     return NextResponse.json({
-        streams
+        streams : streams.map(({_count, ...rest}) =>({
+            ...rest,
+            upvotes: _count.upvotes,
+            haveUpVoted: rest.upvotes.length ? true : false
+        }))
     })
 }
